@@ -216,6 +216,7 @@
           <option value="" disabled selected>Select fine type</option>
           <option>Training</option>
           <option>Game Day or Training</option>
+        <option>Game Day</option>
         </select>
       </div>
     </div>
@@ -361,7 +362,8 @@ function onTypeChange() {
   FINES.forEach(f => {
     const show = f.type === sel || f.type === "Weekly" || f.type === "Reward" ||
       f.type === "Game Day or Training" ||
-      (sel === "Training" && f.type === "Training");
+      (sel === "Training" && f.type === "Training") ||
+      (sel === "Game Day" && f.type === "Game Day");
     if (show) {
       const o = document.createElement("option");
       o.value = f.desc; o.textContent = f.desc;
