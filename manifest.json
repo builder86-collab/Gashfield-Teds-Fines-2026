@@ -2,7 +2,7 @@
   "name": "Fines Tracker",
   "short_name": "Fines",
   "description": "Log player fines to Google Sheets",
-  "start_url": "/fines-tracker/",
+  "start_url": "/Gashfield-Teds-Fines-2026/",
   "display": "standalone",
   "background_color": "#f9f9f8",
   "theme_color": "#1a1a18",
