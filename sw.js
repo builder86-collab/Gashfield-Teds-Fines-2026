@@ -1,5 +1,5 @@
 const CACHE = 'fines-v1';
-const ASSETS = ['/', '/index.html', '/manifest.json'];
+const ASSETS = ['/Gashfield-Teds-Fines-2026/', '/Gashfield-Teds-Fines-2026/index.html', '/Gashfield-Teds-Fines-2026/manifest.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
