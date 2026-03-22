@@ -215,8 +215,9 @@
         <select id="fineType" onchange="onTypeChange()">
           <option value="" disabled selected>Select fine type</option>
           <option>Training</option>
-          <option>Game Day or Training</option>
-        <option>Game Day</option>
+          <option>Game Day</option>
+          <option>Weekly</option>
+          <option>Reward</option>
         </select>
       </div>
     </div>
@@ -360,10 +361,11 @@ function onTypeChange() {
   fs.innerHTML = '<option value="" disabled selected>Select fine</option>';
   document.getElementById("amountRow").innerHTML = "";
   FINES.forEach(f => {
-    const show = f.type === sel || f.type === "Weekly" || f.type === "Reward" ||
-      f.type === "Game Day or Training" ||
-      (sel === "Training" && f.type === "Training") ||
-      (sel === "Game Day" && f.type === "Game Day");
+    const show =
+      (sel === "Training" && (f.type === "Training" || f.type === "Game Day or Training")) ||
+      (sel === "Game Day" && (f.type === "Game Day" || f.type === "Game Day or Training")) ||
+      (sel === "Weekly" && f.type === "Weekly") ||
+      (sel === "Reward" && f.type === "Reward");
     if (show) {
       const o = document.createElement("option");
       o.value = f.desc; o.textContent = f.desc;
