@@ -2,7 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fines">
+<meta name="theme-color" content="#1a1a18">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>Fines Tracker</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -10,8 +16,8 @@
   :root {
     --bg: #f9f9f8;
     --surface: #ffffff;
-    --surface2: #f4f4f2;
-    --border: rgba(0,0,0,0.1);
+    --surface2: #f2f2f0;
+    --border: rgba(0,0,0,0.09);
     --border2: rgba(0,0,0,0.18);
     --text: #1a1a18;
     --text2: #6b6b67;
@@ -21,8 +27,10 @@
     --blue: #1a5a9a;
     --blue-bg: #e8f0fa;
     --red: #c0392b;
-    --radius: 10px;
-    --radius-sm: 6px;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bot: env(safe-area-inset-bottom, 0px);
   }
 
   @media (prefers-color-scheme: dark) {
@@ -30,7 +38,7 @@
       --bg: #1a1a18;
       --surface: #242422;
       --surface2: #2e2e2c;
-      --border: rgba(255,255,255,0.1);
+      --border: rgba(255,255,255,0.08);
       --border2: rgba(255,255,255,0.18);
       --text: #f0f0ee;
       --text2: #a0a09c;
@@ -42,70 +50,94 @@
     }
   }
 
+  html, body {
+    height: 100%;
+    overscroll-behavior: none;
+  }
+
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
-    padding: 24px 16px 48px;
+    -webkit-font-smoothing: antialiased;
   }
 
-  .wrap { max-width: 480px; margin: 0 auto; }
-
-  header { margin-bottom: 24px; }
-  header h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.3px; }
-  header p { font-size: 13px; color: var(--text2); margin-top: 3px; }
-
-  .config {
-    background: var(--surface2);
-    border: 0.5px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px 16px;
-    margin-bottom: 16px;
+  .app {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: calc(var(--safe-top) + 20px) 16px calc(var(--safe-bot) + 32px);
   }
-  .config-label { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text2); margin-bottom: 6px; display: block; }
-  .config p { font-size: 12px; color: var(--text3); margin-bottom: 8px; }
-  .config input {
-    width: 100%; padding: 8px 10px; font-size: 13px;
-    background: var(--surface); border: 0.5px solid var(--border);
-    border-radius: var(--radius-sm); color: var(--text);
-    font-family: inherit;
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
   }
-  .config input:focus { outline: none; border-color: var(--border2); }
+
+  .app-icon {
+    width: 44px; height: 44px;
+    background: var(--text);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; color: var(--bg);
+    flex-shrink: 0;
+  }
+
+  header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; }
+  header p { font-size: 13px; color: var(--text2); margin-top: 1px; }
 
   .card {
     background: var(--surface);
     border: 0.5px solid var(--border);
     border-radius: var(--radius);
-    padding: 18px 16px;
-    margin-bottom: 14px;
+    padding: 0;
+    margin-bottom: 12px;
+    overflow: hidden;
   }
 
-  .field { margin-bottom: 16px; }
-  .field:last-child { margin-bottom: 0; }
+  .field {
+    padding: 13px 16px;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .field:last-child { border-bottom: none; }
 
   label {
     display: block; font-size: 11px; font-weight: 600;
     letter-spacing: 0.06em; text-transform: uppercase;
-    color: var(--text2); margin-bottom: 6px;
+    color: var(--text2); margin-bottom: 5px;
   }
 
   select, input[type="date"] {
-    width: 100%; padding: 10px 12px; font-size: 15px;
-    background: var(--surface2); border: 0.5px solid var(--border);
-    border-radius: var(--radius-sm); color: var(--text);
-    font-family: inherit; cursor: pointer; appearance: none;
+    width: 100%; padding: 0;
+    font-size: 16px; /* 16px prevents iOS zoom */
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: inherit;
+    cursor: pointer;
+    appearance: none;
     -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    padding-right: 32px;
+    outline: none;
   }
-  select:focus, input[type="date"]:focus { outline: none; border-color: var(--border2); }
 
-  .date-fmt { font-size: 12px; color: var(--text3); margin-top: 5px; min-height: 16px; }
+  .select-wrap {
+    position: relative;
+  }
+  .select-wrap::after {
+    content: '';
+    position: absolute; right: 0; top: 50%;
+    transform: translateY(-50%);
+    width: 12px; height: 8px;
+    background: var(--text3);
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+    pointer-events: none;
+  }
 
-  .amount-row { margin-top: 8px; min-height: 22px; display: flex; align-items: center; gap: 8px; }
+  .date-fmt { font-size: 12px; color: var(--text3); margin-top: 4px; min-height: 16px; }
+
+  .amount-row { margin-top: 6px; min-height: 20px; display: flex; align-items: center; gap: 8px; }
   .amount-val { font-size: 13px; color: var(--text2); }
   .amount-val strong { color: var(--text); font-weight: 600; }
   .badge {
@@ -115,35 +147,49 @@
   .badge-green { background: var(--green-bg); color: var(--green); }
   .badge-blue { background: var(--blue-bg); color: var(--blue); }
 
-  .divider { border: none; border-top: 0.5px solid var(--border); margin: 14px 0; }
-
   .btn {
-    width: 100%; padding: 13px; font-size: 15px; font-weight: 600;
+    width: 100%; padding: 15px;
+    font-size: 16px; font-weight: 600;
     background: var(--text); color: var(--bg);
     border: none; border-radius: var(--radius);
     cursor: pointer; font-family: inherit;
     transition: opacity 0.15s, transform 0.1s;
+    margin-bottom: 12px;
+    -webkit-tap-highlight-color: transparent;
   }
-  .btn:hover { opacity: 0.88; }
-  .btn:active { transform: scale(0.98); }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn:active { transform: scale(0.97); opacity: 0.85; }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
   .status {
-    text-align: center; font-size: 13px; margin-top: 10px;
-    min-height: 20px; color: var(--text3);
+    text-align: center; font-size: 14px;
+    min-height: 22px; color: var(--text3);
+    padding: 0 8px;
   }
-  .status.ok { color: var(--green); }
+  .status.ok { color: var(--green); font-weight: 500; }
   .status.err { color: var(--red); }
+
+  .install-hint {
+    margin-top: 20px;
+    padding: 12px 14px;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    color: var(--text3);
+    text-align: center;
+    line-height: 1.5;
+  }
+  .install-hint.hidden { display: none; }
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="app">
   <header>
-    <h1>Fines tracker</h1>
-    <p>Log a fine directly to Google Sheets</p>
+    <div class="app-icon">$</div>
+    <div>
+      <h1>Fines tracker</h1>
+      <p>Log a fine to Google Sheets</p>
+    </div>
   </header>
-
-  <input type="hidden" id="sheetUrl" value="https://script.google.com/macros/s/AKfycbyHGcd0iwsK6SPgTkh1nHSbaKgRjUUGsSVOMty-V6BPsv4sB-7tzGTcM_Qq86HVJ2hs9g/exec">
 
   <div class="card">
     <div class="field">
@@ -152,122 +198,132 @@
       <div class="date-fmt" id="dateFmt"></div>
     </div>
 
-    <hr class="divider">
-
     <div class="field">
       <label>Fine type</label>
-      <select id="fineType" onchange="onTypeChange()">
-        <option value="" disabled selected>Select fine type</option>
-        <option>Training</option>
-        <option>Game Day or Training</option>
-      </select>
+      <div class="select-wrap">
+        <select id="fineType" onchange="onTypeChange()">
+          <option value="" disabled selected>Select fine type</option>
+          <option>Training</option>
+          <option>Game Day or Training</option>
+        </select>
+      </div>
     </div>
 
     <div class="field">
       <label>Player</label>
-      <select id="player">
-        <option value="" disabled selected>Select player</option>
-        <option>Ben Nguyen</option>
-        <option>Brian Kip</option>
-        <option>Cam Stow</option>
-        <option>Dec Lumb</option>
-        <option>Des Khoo</option>
-        <option>Ben Cail</option>
-        <option>Jay Downey</option>
-        <option>Ben 'Hitman' Hart</option>
-        <option>Kurtis Rae</option>
-        <option>Jordan Chinkuli</option>
-        <option>Tom Bell</option>
-        <option>Journey</option>
-        <option>Kohby Coleman</option>
-        <option>Ben Kramer</option>
-        <option>Lachy Owen</option>
-        <option>Mark Eley</option>
-        <option>Michael Ritter</option>
-        <option>Teddy Cope</option>
-        <option>Onur Güler</option>
-        <option>Phil Kelly</option>
-        <option>Tom Bos</option>
-        <option>Wyatt Brown</option>
-      </select>
+      <div class="select-wrap">
+        <select id="player">
+          <option value="" disabled selected>Select player</option>
+          <option>Ben Nguyen</option>
+          <option>Brian Kip</option>
+          <option>Cam Stow</option>
+          <option>Dec Lumb</option>
+          <option>Des Khoo</option>
+          <option>Ben Cail</option>
+          <option>Jay Downey</option>
+          <option>Ben 'Hitman' Hart</option>
+          <option>Kurtis Rae</option>
+          <option>Jordan Chinkuli</option>
+          <option>Tom Bell</option>
+          <option>Journey</option>
+          <option>Kohby Coleman</option>
+          <option>Ben Kramer</option>
+          <option>Lachy Owen</option>
+          <option>Mark Eley</option>
+          <option>Michael Ritter</option>
+          <option>Teddy Cope</option>
+          <option>Onur Güler</option>
+          <option>Phil Kelly</option>
+          <option>Tom Bos</option>
+          <option>Wyatt Brown</option>
+        </select>
+      </div>
     </div>
 
     <div class="field">
       <label>Fine</label>
-      <select id="fine" onchange="onFineChange()">
-        <option value="" disabled selected>Select fine</option>
-      </select>
+      <div class="select-wrap">
+        <select id="fine" onchange="onFineChange()">
+          <option value="" disabled selected>Select fine</option>
+        </select>
+      </div>
       <div class="amount-row" id="amountRow"></div>
     </div>
   </div>
 
   <button class="btn" id="submitBtn" onclick="submitFine()">Log fine</button>
   <div class="status" id="status"></div>
+
+  <div class="install-hint" id="installHint">
+    Tip: tap Share → "Add to Home Screen" to install this as an app on your phone.
+  </div>
 </div>
 
 <script>
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbyHGcd0iwsK6SPgTkh1nHSbaKgRjUUGsSVOMty-V6BPsv4sB-7tzGTcM_Qq86HVJ2hs9g/exec";
+
 const FINES = [
-  { type:"Weekly", desc:"No fines fine", amount:1, label:"$1.00" },
-  { type:"Game Day or Training", desc:"Hitting the post or crossbar during training or match", amount:2, label:"$2.00" },
-  { type:"Game Day or Training", desc:"Wet weather fine - not turning up to training/game if it rains", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"Unsuccessful Hero run from a defender", amount:2, label:"$2.00" },
-  { type:"Game Day or Training", desc:"Nutmegged", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"Borrowing anything, sunscreen, tape etc.", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"Needing to be told more than once to listen up when the gaffer is speaking", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"Jewellery left on post KO whistle (when player is named in game sheet)", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"Not staying for a drink (alcoholic or not)", amount:2, label:"$2.00" },
-  { type:"Training", desc:"Last minute bail from training (<24hrs before training)", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"Scoring a worldie", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"New boots, no goal", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"New gloves, no clean sheet (GKs Only)", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"Wearing captains armband if not captain", amount:2, label:"$2.00" },
-  { type:"Game Day or Training", desc:"Late to training or game", amount:2, label:"$2.00" },
-  { type:"Game Day or Training", desc:"Complaining about being fined/arguing a fine", amount:2, label:"$2.00" },
-  { type:"Game Day or Training", desc:"Drinking a cruiser/WKD/UDL/Midori/cider/gin and lemonade at any point", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"Leaving drink unfinished", amount:2, label:"$2.00" },
-  { type:"Game Day or Training", desc:"Haircut fine: caught having had a haircut in the last week", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"Not submitting MVP votes in a timely manner (i.e. 6pm game day)", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"Not bringing a chair for your spectator/supporter", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"Fruit and/or salad fine", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:'The "Samir" Fine - backheel that doesn\'t reach a teammate', amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"Foul throw", amount:2, label:"$2.00" },
-  { type:"Game Day or Training", desc:"Tommy Bell Fine (misc. TeamApp RSVP shenanigans)", amount:2, label:"$2.00" },
-  { type:"Training", desc:"Last minute bail from game without due reason (inside 24hrs)", amount:2, label:"$2.00" },
-  { type:"Training", desc:"Not providing RSVP for training or game by Tuesday 6pm", amount:2, label:"$2.00" },
-  { type:"Training", desc:"Forgetting gear at the ground after game/training", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"Phone going off in a dressing room (emergencies excluded)", amount:2, label:"$2.00" },
-  { type:"Game Day or Training", desc:"Forgetting bib", amount:2, label:"$2.00" },
-  { type:"Training", desc:"Full kit wanker at training (unless all club attire)", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"Marky (Missing 1v1/close range goal)", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"Wardy (Cramping up)", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"Doing dumb shit when drunk at a squad/club event (voted by those attending)", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"2 goals, no hattrick (stackable)", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"Defender/Last man taking on a striker and losing", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"Celebrity, appearing in any news outlet publication (club mag included)", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"Forgetting any sort of gear to the match (socks, shorts, shinnies etc) - PER ITEM", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"Excessive celebration", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"Having a penalty saved (shot on target)", amount:2, label:"$2.00" },
-  { type:"Game Day", desc:"Shocking Banter Fine (Team vote on banter that falls flat)", amount:2, label:"$2.00" },
-  { type:"Training", desc:"Wild Ted Spotting - snap a pic and send to group", amount:5, label:"$5.00" },
-  { type:"Game Day", desc:"Missing a penalty (shot off target)", amount:5, label:"$5.00" },
-  { type:"Training", desc:"No Show/Excessively late to training or game (after kickoff)", amount:5, label:"$5.00" },
-  { type:"Game Day", desc:"Dive", amount:5, label:"$5.00" },
-  { type:"Game Day", desc:"Yellow Card", amount:5, label:"$5.00" },
-  { type:"Game Day", desc:"Captain not handing over armband if not playing that round", amount:5, label:"$5.00" },
-  { type:"Game Day", desc:"Turning up hungover to the game and not performing because of it", amount:5, label:"$5.00" },
-  { type:"Game Day", desc:"Giving away a penalty", amount:5, label:"$5.00" },
-  { type:"Game Day", desc:"Excessive arguing with the referee", amount:5, label:"$5.00" },
-  { type:"Game Day", desc:"Own Goal", amount:5, label:"$5.00" },
-  { type:"Game Day", desc:"Dogging the boys", amount:5, label:"$5.00" },
-  { type:"Game Day", desc:"Dummy Spit/Carrying On Fine", amount:5, label:"$5.00" },
-  { type:"Game Day", desc:"Excessive Negativity Fine", amount:5, label:"$5.00" },
-  { type:"Game Day or Training", desc:"Dangerous tackle", amount:10, label:"$10.00" },
-  { type:"Game Day", desc:"Red card", amount:20, label:"$20.00" },
-  { type:"Game Day", desc:"Having to go to tribunal", amount:40, label:"$40.00" },
-  { type:"Game Day", desc:"Goal line clearance - $2 off that week's fines", amount:-2, label:"-$2.00", deduction:true },
-  { type:"Reward", desc:"Free drink - keeper saves a penalty (player who gives it away buys)", amount:0, label:"Free drink", reward:true },
-  { type:"Reward", desc:"Free drink - Hat trick (Gaffer buys)", amount:0, label:"Free drink", reward:true },
-  { type:"Reward", desc:"Free drink - Last minute winner", amount:0, label:"Free drink", reward:true },
+  { type:"Weekly", desc:"No fines fine", label:"$1.00" },
+  { type:"Game Day or Training", desc:"Hitting the post or crossbar during training or match", label:"$2.00" },
+  { type:"Game Day or Training", desc:"Wet weather fine - not turning up to training/game if it rains", label:"$2.00" },
+  { type:"Game Day", desc:"Unsuccessful Hero run from a defender", label:"$2.00" },
+  { type:"Game Day or Training", desc:"Nutmegged", label:"$2.00" },
+  { type:"Game Day", desc:"Borrowing anything, sunscreen, tape etc.", label:"$2.00" },
+  { type:"Game Day", desc:"Needing to be told more than once to listen up when the gaffer is speaking", label:"$2.00" },
+  { type:"Game Day", desc:"Jewellery left on post KO whistle (when player is named in game sheet)", label:"$2.00" },
+  { type:"Game Day", desc:"Not staying for a drink (alcoholic or not)", label:"$2.00" },
+  { type:"Training", desc:"Last minute bail from training (<24hrs before training)", label:"$2.00" },
+  { type:"Game Day", desc:"Scoring a worldie", label:"$2.00" },
+  { type:"Game Day", desc:"New boots, no goal", label:"$2.00" },
+  { type:"Game Day", desc:"New gloves, no clean sheet (GKs Only)", label:"$2.00" },
+  { type:"Game Day", desc:"Wearing captains armband if not captain", label:"$2.00" },
+  { type:"Game Day or Training", desc:"Late to training or game", label:"$2.00" },
+  { type:"Game Day or Training", desc:"Complaining about being fined/arguing a fine", label:"$2.00" },
+  { type:"Game Day or Training", desc:"Drinking a cruiser/WKD/UDL/Midori/cider/gin and lemonade at any point", label:"$2.00" },
+  { type:"Game Day", desc:"Leaving drink unfinished", label:"$2.00" },
+  { type:"Game Day or Training", desc:"Haircut fine: caught having had a haircut in the last week", label:"$2.00" },
+  { type:"Game Day", desc:"Not submitting MVP votes in a timely manner (i.e. 6pm game day)", label:"$2.00" },
+  { type:"Game Day", desc:"Not bringing a chair for your spectator/supporter", label:"$2.00" },
+  { type:"Game Day", desc:"Fruit and/or salad fine", label:"$2.00" },
+  { type:"Game Day", desc:'The "Samir" Fine - backheel that doesn\'t reach a teammate', label:"$2.00" },
+  { type:"Game Day", desc:"Foul throw", label:"$2.00" },
+  { type:"Game Day or Training", desc:"Tommy Bell Fine (misc. TeamApp RSVP shenanigans)", label:"$2.00" },
+  { type:"Training", desc:"Last minute bail from game without due reason (inside 24hrs)", label:"$2.00" },
+  { type:"Training", desc:"Not providing RSVP for training or game by Tuesday 6pm", label:"$2.00" },
+  { type:"Training", desc:"Forgetting gear at the ground after game/training", label:"$2.00" },
+  { type:"Game Day", desc:"Phone going off in a dressing room (emergencies excluded)", label:"$2.00" },
+  { type:"Game Day or Training", desc:"Forgetting bib", label:"$2.00" },
+  { type:"Training", desc:"Full kit wanker at training (unless all club attire)", label:"$2.00" },
+  { type:"Game Day", desc:"Marky (Missing 1v1/close range goal)", label:"$2.00" },
+  { type:"Game Day", desc:"Wardy (Cramping up)", label:"$2.00" },
+  { type:"Game Day", desc:"Doing dumb shit when drunk at a squad/club event (voted by those attending)", label:"$2.00" },
+  { type:"Game Day", desc:"2 goals, no hattrick (stackable)", label:"$2.00" },
+  { type:"Game Day", desc:"Defender/Last man taking on a striker and losing", label:"$2.00" },
+  { type:"Game Day", desc:"Celebrity, appearing in any news outlet publication (club mag included)", label:"$2.00" },
+  { type:"Game Day", desc:"Forgetting any sort of gear to the match (socks, shorts, shinnies etc) - PER ITEM", label:"$2.00" },
+  { type:"Game Day", desc:"Excessive celebration", label:"$2.00" },
+  { type:"Game Day", desc:"Having a penalty saved (shot on target)", label:"$2.00" },
+  { type:"Game Day", desc:"Shocking Banter Fine (Team vote on banter that falls flat)", label:"$2.00" },
+  { type:"Training", desc:"Wild Ted Spotting - snap a pic and send to group", label:"$5.00" },
+  { type:"Game Day", desc:"Missing a penalty (shot off target)", label:"$5.00" },
+  { type:"Training", desc:"No Show/Excessively late to training or game (after kickoff)", label:"$5.00" },
+  { type:"Game Day", desc:"Dive", label:"$5.00" },
+  { type:"Game Day", desc:"Yellow Card", label:"$5.00" },
+  { type:"Game Day", desc:"Captain not handing over armband if not playing that round", label:"$5.00" },
+  { type:"Game Day", desc:"Turning up hungover to the game and not performing because of it", label:"$5.00" },
+  { type:"Game Day", desc:"Giving away a penalty", label:"$5.00" },
+  { type:"Game Day", desc:"Excessive arguing with the referee", label:"$5.00" },
+  { type:"Game Day", desc:"Own Goal", label:"$5.00" },
+  { type:"Game Day", desc:"Dogging the boys", label:"$5.00" },
+  { type:"Game Day", desc:"Dummy Spit/Carrying On Fine", label:"$5.00" },
+  { type:"Game Day", desc:"Excessive Negativity Fine", label:"$5.00" },
+  { type:"Game Day or Training", desc:"Dangerous tackle", label:"$10.00" },
+  { type:"Game Day", desc:"Red card", label:"$20.00" },
+  { type:"Game Day", desc:"Having to go to tribunal", label:"$40.00" },
+  { type:"Game Day", desc:"Goal line clearance - $2 off that week's fines", label:"-$2.00", deduction:true },
+  { type:"Reward", desc:"Free drink - keeper saves a penalty (player who gives it away buys)", label:"Free drink", reward:true },
+  { type:"Reward", desc:"Free drink - Hat trick (Gaffer buys)", label:"Free drink", reward:true },
+  { type:"Reward", desc:"Free drink - Last minute winner", label:"Free drink", reward:true },
 ];
 
 const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -292,9 +348,8 @@ function onTypeChange() {
   fs.innerHTML = '<option value="" disabled selected>Select fine</option>';
   document.getElementById("amountRow").innerHTML = "";
   FINES.forEach(f => {
-    const show = f.type === sel ||
-      f.type === "Weekly" || f.type === "Reward" ||
-      (f.type === "Game Day or Training") ||
+    const show = f.type === sel || f.type === "Weekly" || f.type === "Reward" ||
+      f.type === "Game Day or Training" ||
       (sel === "Training" && f.type === "Training");
     if (show) {
       const o = document.createElement("option");
@@ -330,7 +385,6 @@ function populateAll() {
 populateAll();
 
 async function submitFine() {
-  const url = document.getElementById("sheetUrl").value.trim();
   const date = formatDate(dateInput.value);
   const fineType = document.getElementById("fineType").value;
   const player = document.getElementById("player").value;
@@ -342,10 +396,6 @@ async function submitFine() {
     statusEl.textContent = "Please fill in all fields.";
     statusEl.className = "status err"; return;
   }
-  if (!url) {
-    statusEl.textContent = "Paste your Apps Script URL above to enable logging.";
-    statusEl.className = "status err"; return;
-  }
 
   const fine = FINES.find(f => f.desc === fineDesc);
   const amount = fine ? fine.label : "";
@@ -355,7 +405,7 @@ async function submitFine() {
   statusEl.className = "status";
 
   try {
-    await fetch(url, {
+    await fetch(SHEET_URL, {
       method: "POST", mode: "no-cors",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ date, fineType, player, fine: fineDesc, amount })
@@ -368,10 +418,18 @@ async function submitFine() {
     document.getElementById("amountRow").innerHTML = "";
     populateAll();
   } catch(err) {
-    statusEl.textContent = "Something went wrong. Check your URL.";
+    statusEl.textContent = "Something went wrong. Check your connection.";
     statusEl.className = "status err";
   }
   btn.disabled = false;
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+
+if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+  document.getElementById('installHint').classList.add('hidden');
 }
 </script>
 </body>
