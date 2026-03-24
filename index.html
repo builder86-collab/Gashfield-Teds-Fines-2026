@@ -377,6 +377,17 @@
       </div>
       <div class="amount-row" id="amountRow"></div>
     </div>
+
+    <div class="field">
+      <label>Multiplier <span style="font-size:10px;font-weight:400;color:var(--text3);">(optional)</span></label>
+      <div class="select-wrap">
+        <select id="multiplier" onchange="onFineChange()">
+          <option value="1" selected>No multiplier</option>
+          <option value="2">Birthday (x2)</option>
+          <option value="2">Double Fines Period (x2)</option>
+        </select>
+      </div>
+    </div>
   </div>
 
   <button class="btn" id="submitBtn" onclick="submitFine()">Log fine</button>
@@ -706,7 +717,14 @@ async function submitFine() {
   }
 
   const fine = FINES.find(f => f.desc === fineDesc);
-  const amount = fine ? fine.label : "";
+  const multiplierEl = document.getElementById('multiplier');
+  const multiplier = parseFloat(multiplierEl.value) || 1;
+  const multiplierName = multiplierEl.options[multiplierEl.selectedIndex].text;
+  let amount = fine ? fine.label : "";
+  if (fine && !fine.reward && !fine.deduction && multiplier > 1) {
+    amount = "$" + (fine.amount * multiplier).toFixed(2);
+  }
+  const multiplierUsed = multiplier > 1 ? multiplierName : "";
 
   btn.disabled = true;
   statusEl.textContent = "Logging...";
@@ -716,7 +734,7 @@ async function submitFine() {
     await fetch(SHEET_URL, {
       method: "POST", mode: "no-cors",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date, fineType, player, fine: fineDesc, amount, submittedBy: currentUser })
+      body: JSON.stringify({ date, fineType, player, fine: fineDesc, amount, multiplier: multiplierUsed, submittedBy: currentUser })
     });
     statusEl.textContent = `Logged — ${player}, ${amount}`;
     statusEl.className = "status ok";
