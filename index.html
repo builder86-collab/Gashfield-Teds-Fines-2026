@@ -192,7 +192,37 @@
 </style>
 </head>
 <body>
-<div class="app">
+<div class="app" id="loginScreen">
+  <img class="banner" src="banner.jpg" alt="Team photo" />
+  <header>
+    <div class="app-icon">$</div>
+    <div>
+      <h1>Fines tracker</h1>
+      <p>Sign in to continue</p>
+    </div>
+  </header>
+
+  <div class="card">
+    <div class="field">
+      <label>Your name</label>
+      <div class="select-wrap">
+        <select id="loginName" disabled>
+          <option value="" disabled selected>Loading players...</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label id="pinLabel">PIN</label>
+      <input type="password" inputmode="numeric" maxlength="4" id="loginPin" placeholder="Enter your 4-digit PIN" style="font-size:16px; background:transparent; border:none; border-bottom: 0.5px solid var(--border2); border-radius:0; padding: 8px 0; width:100%; color:var(--text); font-family:inherit;" />
+      <div style="font-size:12px; color:var(--text3); margin-top:6px; min-height:16px;" id="pinHint"></div>
+    </div>
+  </div>
+
+  <button class="btn" id="loginBtn" onclick="handleLogin()">Continue</button>
+  <div class="status" id="loginStatus"></div>
+</div>
+
+<div class="app" id="mainScreen" style="display:none;">
   <img class="banner" src="banner.jpg" alt="Team photo" />
   <header>
     <div class="app-icon">$</div>
@@ -200,7 +230,9 @@
       <h1>Fines tracker</h1>
       <p>Log a fine to Google Sheets</p>
     </div>
+    <button onclick="logout()" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;padding:4px 8px;font-family:inherit;">Sign out</button>
   </header>
+  <div style="font-size:12px;color:var(--text3);margin-bottom:12px;" id="submittedBy"></div>
 
   <div class="card">
     <div class="field">
@@ -271,8 +303,113 @@
     Tip: tap Share → "Add to Home Screen" to install this as an app on your phone.
   </div>
 </div>
+</div>
 
 <script>
+// ─── LOGIN ───────────────────────────────────────────────
+const SHEET_ID = "1Fm_QRVYlTmxAUk81gtuWJQiid8izRxRMidZDzVkZ9zQ";
+
+async function loadPlayers() {
+  const sel = document.getElementById('loginName');
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Players!A:A?key=AIzaSyD-placeholder`;
+    // Use CSV export instead — no API key needed for public sheets
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Players`;
+    const res = await fetch(csvUrl);
+    const text = await res.text();
+    const names = text.split('\n')
+      .map(r => r.replace(/"/g, '').trim())
+      .filter(r => r.length > 0);
+    sel.innerHTML = '<option value="" disabled selected>Select your name</option>';
+    names.forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      sel.appendChild(opt);
+    });
+    sel.disabled = false;
+  } catch(e) {
+    sel.innerHTML = '<option value="" disabled selected>Could not load players</option>';
+    sel.disabled = false;
+    console.error('Failed to load players:', e);
+  }
+}
+
+const PLAYERS = []; ["Ben Nguyen","Brian Kip","Cam Stow","Dec Lumb","Des Khoo","Ben Cail","Jay Downey","Ben 'Hitman' Hart","Kurtis Rae","Jordan Chinkuli","Tom Bell","Journey","Kohby Coleman","Ben Kramer","Lachy Owen","Mark Eley","Michael Ritter","Teddy Cope","Onur Güler","Phil Kelly","Tom Bos","Wyatt Brown"];
+
+let currentUser = null;
+
+function getPins() {
+  try { return JSON.parse(localStorage.getItem('finePins') || '{}'); } catch(e) { return {}; }
+}
+function savePins(pins) {
+  localStorage.setItem('finePins', JSON.stringify(pins));
+}
+
+function handleLogin() {
+  const name = document.getElementById('loginName').value;
+  const pin = document.getElementById('loginPin').value.trim();
+  const status = document.getElementById('loginStatus');
+
+  if (!name) { status.textContent = 'Please select your name.'; status.className = 'status err'; return; }
+  if (pin.length !== 4 || !/^\d{4}$/.test(pin)) { status.textContent = 'PIN must be exactly 4 digits.'; status.className = 'status err'; return; }
+
+  const pins = getPins();
+
+  if (!pins[name]) {
+    // First time — set PIN
+    pins[name] = pin;
+    savePins(pins);
+    currentUser = name;
+    showMainScreen();
+  } else if (pins[name] === pin) {
+    currentUser = name;
+    showMainScreen();
+  } else {
+    status.textContent = 'Incorrect PIN. Try again.';
+    status.className = 'status err';
+    document.getElementById('loginPin').value = '';
+  }
+}
+
+function showMainScreen() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('mainScreen').style.display = 'block';
+  document.getElementById('submittedBy').textContent = 'Logged in as ' + currentUser;
+}
+
+function logout() {
+  currentUser = null;
+  document.getElementById('loginScreen').style.display = 'block';
+  document.getElementById('mainScreen').style.display = 'none';
+  document.getElementById('loginPin').value = '';
+  document.getElementById('loginStatus').textContent = '';
+  document.getElementById('loginName').value = '';
+  document.getElementById('pinHint').textContent = '';
+}
+
+// Update pin hint when name is selected
+document.getElementById('loginName').addEventListener('change', function() {
+  const pins = getPins();
+  const hint = document.getElementById('pinHint');
+  const label = document.getElementById('pinLabel');
+  if (pins[this.value]) {
+    hint.textContent = 'Welcome back — enter your PIN';
+    label.textContent = 'PIN';
+  } else {
+    hint.textContent = 'First time? Create a 4-digit PIN';
+    label.textContent = 'Create PIN';
+  }
+});
+
+// Allow Enter key on PIN field
+document.getElementById('loginPin').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') handleLogin();
+});
+
+// Load players on startup
+loadPlayers();
+
+// ─── APP ─────────────────────────────────────────────────
 const SHEET_URL = "https://script.google.com/macros/s/AKfycbyHGcd0iwsK6SPgTkh1nHSbaKgRjUUGsSVOMty-V6BPsv4sB-7tzGTcM_Qq86HVJ2hs9g/exec";
 
 const FINES = [
@@ -423,7 +560,7 @@ async function submitFine() {
     await fetch(SHEET_URL, {
       method: "POST", mode: "no-cors",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date, fineType, player, fine: fineDesc, amount })
+      body: JSON.stringify({ date, fineType, player, fine: fineDesc, amount, submittedBy: currentUser })
     });
     statusEl.textContent = `Logged — ${player}, ${amount}`;
     statusEl.className = "status ok";
