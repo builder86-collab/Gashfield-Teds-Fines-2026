@@ -189,6 +189,83 @@
     margin-bottom: 20px;
     display: block;
   }
+
+  .tabs {
+    display: flex;
+    border-bottom: 0.5px solid var(--border);
+    margin-bottom: 16px;
+    gap: 0;
+  }
+  .tab {
+    flex: 1;
+    padding: 10px 0;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    font-family: inherit;
+    transition: color 0.15s;
+  }
+  .tab.active {
+    color: var(--text);
+    border-bottom: 2px solid var(--text);
+  }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .tally-row {
+    display: flex;
+    align-items: center;
+    padding: 11px 16px;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .tally-row:last-child { border-bottom: none; }
+  .tally-rank {
+    font-size: 12px;
+    color: var(--text3);
+    width: 24px;
+    flex-shrink: 0;
+  }
+  .tally-name {
+    flex: 1;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .tally-amounts {
+    text-align: right;
+  }
+  .tally-alltime {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .tally-week {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 1px;
+  }
+  .tally-loading {
+    text-align: center;
+    color: var(--text3);
+    font-size: 13px;
+    padding: 24px 0;
+  }
+  .refresh-btn {
+    font-size: 12px;
+    color: var(--text3);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 0;
+    float: right;
+    margin-top: 2px;
+  }
 </style>
 </head>
 <body>
@@ -228,11 +305,17 @@
     <div class="app-icon">$</div>
     <div>
       <h1>Fines tracker</h1>
-      <p>Log a fine to Google Sheets</p>
+      <p id="submittedBy" style="font-size:13px;color:var(--text2);margin-top:1px;"></p>
     </div>
     <button onclick="logout()" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;padding:4px 8px;font-family:inherit;">Sign out</button>
   </header>
-  <div style="font-size:12px;color:var(--text3);margin-bottom:12px;" id="submittedBy"></div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('logTab', this)">Log Fine</button>
+    <button class="tab" onclick="switchTab('tallyTab', this)">Tally</button>
+  </div>
+
+  <div id="logTab" class="tab-content active">
 
   <div class="card">
     <div class="field">
@@ -408,6 +491,79 @@ document.getElementById('loginPin').addEventListener('keydown', function(e) {
 
 // Load players on startup
 loadPlayers();
+
+// ─── TABS ─────────────────────────────────────────────────
+function switchTab(tabId, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  btn.classList.add('active');
+  if (tabId === 'tallyTab') loadTally();
+}
+
+// ─── TALLY ────────────────────────────────────────────────
+async function loadTally() {
+  const list = document.getElementById('tallyList');
+  list.innerHTML = '<div class="tally-loading">Loading...</div>';
+  try {
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Table%201`;
+    const res = await fetch(csvUrl);
+    const text = await res.text();
+    const rows = text.trim().split('\n').slice(1)
+      .map(r => r.split(',').map(c => c.replace(/"/g, '').trim()))
+      .filter(r => r.length >= 5 && r[2]);
+
+    // Work out start of current week (Monday)
+    const now = new Date();
+    const day = now.getDay();
+    const diff = (day === 0 ? -6 : 1 - day);
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() + diff);
+    weekStart.setHours(0,0,0,0);
+
+    // Tally per player
+    const allTime = {}, thisWeek = {};
+    rows.forEach(r => {
+      const player = r[2];
+      const amountStr = r[4] || '0';
+      const amount = parseFloat(amountStr.replace(/[^0-9.-]/g, '')) || 0;
+
+      // Parse date DD/MM/YY
+      const dateParts = r[0].replace(/^[A-Za-z]+,\s*/, '').split('/');
+      let fineDate = null;
+      if (dateParts.length === 3) {
+        const yr = parseInt(dateParts[2]) + 2000;
+        fineDate = new Date(yr, parseInt(dateParts[1])-1, parseInt(dateParts[0]));
+      }
+
+      allTime[player] = (allTime[player] || 0) + amount;
+      if (fineDate && fineDate >= weekStart) {
+        thisWeek[player] = (thisWeek[player] || 0) + amount;
+      }
+    });
+
+    // Sort by all-time highest
+    const players = Object.keys(allTime).sort((a,b) => allTime[b] - allTime[a]);
+
+    if (players.length === 0) {
+      list.innerHTML = '<div class="tally-loading">No fines logged yet.</div>';
+      return;
+    }
+
+    list.innerHTML = players.map((p, i) => `
+      <div class="tally-row">
+        <span class="tally-rank">${i+1}</span>
+        <span class="tally-name">${p}</span>
+        <div class="tally-amounts">
+          <div class="tally-alltime">$${allTime[p].toFixed(2)}</div>
+          <div class="tally-week">This week: $${(thisWeek[p] || 0).toFixed(2)}</div>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    list.innerHTML = '<div class="tally-loading">Could not load data. Check your connection.</div>';
+    console.error(e);
+  }
+}
 
 // ─── APP ─────────────────────────────────────────────────
 const SHEET_URL = "https://script.google.com/macros/s/AKfycbyHGcd0iwsK6SPgTkh1nHSbaKgRjUUGsSVOMty-V6BPsv4sB-7tzGTcM_Qq86HVJ2hs9g/exec";
