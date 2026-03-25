@@ -328,11 +328,7 @@
       <label>Fine type</label>
       <div class="select-wrap">
         <select id="fineType" onchange="onTypeChange()">
-          <option value="" disabled selected>Select fine type</option>
-          <option>Training</option>
-          <option>Game Day</option>
-          <option>Weekly</option>
-          <option>Reward</option>
+          <option value="" disabled selected>Loading...</option>
         </select>
       </div>
     </div>
@@ -500,8 +496,63 @@ document.getElementById('loginPin').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') handleLogin();
 });
 
+// ─── LOAD FINES FROM SHEET ────────────────────────────────
+async function loadFines() {
+  try {
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Fines`;
+    const res = await fetch(csvUrl);
+    const text = await res.text();
+    const rows = text.trim().split('\n').slice(1) // skip header
+      .map(r => {
+        // parse CSV properly handling quoted fields
+        const cols = [];
+        let cur = '', inQ = false;
+        for (let i = 0; i < r.length; i++) {
+          if (r[i] === '"') { inQ = !inQ; }
+          else if (r[i] === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+          else { cur += r[i]; }
+        }
+        cols.push(cur.trim());
+        return cols;
+      })
+      .filter(r => r[0] && r[1] && r[2]);
+
+    FINES = rows.map(r => {
+      const desc = r[0];
+      const type = r[1];
+      const amountStr = r[2];
+      const isReward = amountStr.toLowerCase() === 'free drink';
+      const isDeduction = amountStr.startsWith('-');
+      const amount = isReward ? 0 : parseFloat(amountStr.replace(/[^0-9.-]/g, '')) || 0;
+      return {
+        desc,
+        type,
+        amount,
+        label: isReward ? 'Free drink' : amountStr,
+        reward: isReward,
+        deduction: isDeduction
+      };
+    });
+
+    // Populate fine type dropdown with unique types from sheet
+    const fineTypeEl = document.getElementById('fineType');
+    const uniqueTypes = [...new Set(FINES.map(f => f.type))];
+    fineTypeEl.innerHTML = '<option value="" disabled selected>Select fine type</option>';
+    uniqueTypes.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t; opt.textContent = t;
+      fineTypeEl.appendChild(opt);
+    });
+
+    console.log(`Loaded ${FINES.length} fines, ${uniqueTypes.length} types`);
+  } catch(e) {
+    console.error('Failed to load fines:', e);
+  }
+}
+
 // Load players on startup
 loadPlayers();
+loadFines();
 
 // ─── TABS ─────────────────────────────────────────────────
 function switchTab(tabId, btn) {
@@ -579,69 +630,7 @@ async function loadTally() {
 // ─── APP ─────────────────────────────────────────────────
 const SHEET_URL = "https://script.google.com/macros/s/AKfycbyHGcd0iwsK6SPgTkh1nHSbaKgRjUUGsSVOMty-V6BPsv4sB-7tzGTcM_Qq86HVJ2hs9g/exec";
 
-const FINES = [
-  { type:"Weekly", desc:"No fines fine", label:"$1.00" },
-  { type:"Game Day or Training", desc:"Hitting the post or crossbar during training or match", label:"$2.00" },
-  { type:"Game Day or Training", desc:"Wet weather fine - not turning up to training/game if it rains", label:"$2.00" },
-  { type:"Game Day", desc:"Unsuccessful Hero run from a defender", label:"$2.00" },
-  { type:"Game Day or Training", desc:"Nutmegged", label:"$2.00" },
-  { type:"Game Day", desc:"Borrowing anything, sunscreen, tape etc.", label:"$2.00" },
-  { type:"Game Day", desc:"Needing to be told more than once to listen up when the gaffer is speaking", label:"$2.00" },
-  { type:"Game Day", desc:"Jewellery left on post KO whistle (when player is named in game sheet)", label:"$2.00" },
-  { type:"Game Day", desc:"Not staying for a drink (alcoholic or not)", label:"$2.00" },
-  { type:"Training", desc:"Last minute bail from training (<24hrs before training)", label:"$2.00" },
-  { type:"Game Day", desc:"Scoring a worldie", label:"$2.00" },
-  { type:"Game Day", desc:"New boots, no goal", label:"$2.00" },
-  { type:"Game Day", desc:"New gloves, no clean sheet (GKs Only)", label:"$2.00" },
-  { type:"Game Day", desc:"Wearing captains armband if not captain", label:"$2.00" },
-  { type:"Game Day or Training", desc:"Late to training or game", label:"$2.00" },
-  { type:"Game Day or Training", desc:"Complaining about being fined/arguing a fine", label:"$2.00" },
-  { type:"Game Day or Training", desc:"Drinking a cruiser/WKD/UDL/Midori/cider/gin and lemonade at any point", label:"$2.00" },
-  { type:"Game Day", desc:"Leaving drink unfinished", label:"$2.00" },
-  { type:"Game Day or Training", desc:"Haircut fine: caught having had a haircut in the last week", label:"$2.00" },
-  { type:"Game Day", desc:"Not submitting MVP votes in a timely manner (i.e. 6pm game day)", label:"$2.00" },
-  { type:"Game Day", desc:"Not bringing a chair for your spectator/supporter", label:"$2.00" },
-  { type:"Game Day", desc:"Fruit and/or salad fine", label:"$2.00" },
-  { type:"Game Day", desc:'The "Samir" Fine - backheel that doesn\'t reach a teammate', label:"$2.00" },
-  { type:"Game Day", desc:"Foul throw", label:"$2.00" },
-  { type:"Game Day or Training", desc:"Tommy Bell Fine (misc. TeamApp RSVP shenanigans)", label:"$2.00" },
-  { type:"Training", desc:"Last minute bail from game without due reason (inside 24hrs)", label:"$2.00" },
-  { type:"Training", desc:"Not providing RSVP for training or game by Tuesday 6pm", label:"$2.00" },
-  { type:"Training", desc:"Forgetting gear at the ground after game/training", label:"$2.00" },
-  { type:"Game Day", desc:"Phone going off in a dressing room (emergencies excluded)", label:"$2.00" },
-  { type:"Game Day or Training", desc:"Forgetting bib", label:"$2.00" },
-  { type:"Training", desc:"Full kit wanker at training (unless all club attire)", label:"$2.00" },
-  { type:"Game Day", desc:"Marky (Missing 1v1/close range goal)", label:"$2.00" },
-  { type:"Game Day", desc:"Wardy (Cramping up)", label:"$2.00" },
-  { type:"Game Day", desc:"Doing dumb shit when drunk at a squad/club event (voted by those attending)", label:"$2.00" },
-  { type:"Game Day", desc:"2 goals, no hattrick (stackable)", label:"$2.00" },
-  { type:"Game Day", desc:"Defender/Last man taking on a striker and losing", label:"$2.00" },
-  { type:"Game Day", desc:"Celebrity, appearing in any news outlet publication (club mag included)", label:"$2.00" },
-  { type:"Game Day", desc:"Forgetting any sort of gear to the match (socks, shorts, shinnies etc) - PER ITEM", label:"$2.00" },
-  { type:"Game Day", desc:"Excessive celebration", label:"$2.00" },
-  { type:"Game Day", desc:"Having a penalty saved (shot on target)", label:"$2.00" },
-  { type:"Game Day", desc:"Shocking Banter Fine (Team vote on banter that falls flat)", label:"$2.00" },
-  { type:"Training", desc:"Wild Ted Spotting - snap a pic and send to group", label:"$5.00" },
-  { type:"Game Day", desc:"Missing a penalty (shot off target)", label:"$5.00" },
-  { type:"Training", desc:"No Show/Excessively late to training or game (after kickoff)", label:"$5.00" },
-  { type:"Game Day", desc:"Dive", label:"$5.00" },
-  { type:"Game Day", desc:"Yellow Card", label:"$5.00" },
-  { type:"Game Day", desc:"Captain not handing over armband if not playing that round", label:"$5.00" },
-  { type:"Game Day", desc:"Turning up hungover to the game and not performing because of it", label:"$5.00" },
-  { type:"Game Day", desc:"Giving away a penalty", label:"$5.00" },
-  { type:"Game Day", desc:"Excessive arguing with the referee", label:"$5.00" },
-  { type:"Game Day", desc:"Own Goal", label:"$5.00" },
-  { type:"Game Day", desc:"Dogging the boys", label:"$5.00" },
-  { type:"Game Day", desc:"Dummy Spit/Carrying On Fine", label:"$5.00" },
-  { type:"Game Day", desc:"Excessive Negativity Fine", label:"$5.00" },
-  { type:"Game Day or Training", desc:"Dangerous tackle", label:"$10.00" },
-  { type:"Game Day", desc:"Red card", label:"$20.00" },
-  { type:"Game Day", desc:"Having to go to tribunal", label:"$40.00" },
-  { type:"Game Day", desc:"Goal line clearance - $2 off that week's fines", label:"-$2.00", deduction:true },
-  { type:"Reward", desc:"Free drink - keeper saves a penalty (player who gives it away buys)", label:"Free drink", reward:true },
-  { type:"Reward", desc:"Free drink - Hat trick (Gaffer buys)", label:"Free drink", reward:true },
-  { type:"Reward", desc:"Free drink - Last minute winner", label:"Free drink", reward:true },
-];
+let FINES = [];
 
 const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 
