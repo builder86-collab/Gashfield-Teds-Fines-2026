@@ -620,7 +620,7 @@ async function loadTally() {
 }
 
 // ─── APP ─────────────────────────────────────────────────
-const SHEET_URL = "https://script.google.com/macros/s/AKfycbyHGcd0iwsK6SPgTkh1nHSbaKgRjUUGsSVOMty-V6BPsv4sB-7tzGTcM_Qq86HVJ2hs9g/exec";
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbz_7f-_jMz1fIjMVqqT_d2rsrV7lJwkoYaOp5dQiymEPamzG4k9EHiLCzXmEoaNl-mlwA/exec";
 
 let FINES = [];
 
@@ -707,8 +707,6 @@ async function submitFine() {
   statusEl.className = "status";
 
   const payload = { date, fineType, submittedBy: currentUser, player, fine: fineDesc, amount };
-  statusEl.textContent = "Sending: " + JSON.stringify(payload);
-  await new Promise(r => setTimeout(r, 5000));
 
   try {
     await fetch(SHEET_URL, {
