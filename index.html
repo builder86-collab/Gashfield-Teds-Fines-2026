@@ -560,7 +560,7 @@ async function loadTally() {
   const list = document.getElementById('tallyList');
   list.innerHTML = '<div class="tally-loading">Loading...</div>';
   try {
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Table%201`;
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Players_Fines_Costs`;
     const res = await fetch(csvUrl);
     const text = await res.text();
     const rows = text.trim().split('\n').slice(1)
