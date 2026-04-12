@@ -313,6 +313,7 @@
   <div class="tabs">
     <button class="tab active" onclick="switchTab('logTab', this)">Log Fine</button>
     <button class="tab" onclick="switchTab('tallyTab', this)">Tally</button>
+    <button class="tab" onclick="switchTab('voteTab', this)">3-2-1</button>
   </div>
 
   <div id="logTab" class="tab-content active">
@@ -371,6 +372,46 @@
     Tip: tap Share → "Add to Home Screen" to install this as an app on your phone.
   </div>
 </div>
+
+<div id="voteTab" class="tab-content">
+  <div class="card">
+    <div class="field">
+      <label>Player or Coach</label>
+      <div class="select-wrap">
+        <select id="voteType">
+          <option value="" disabled selected>Select type</option>
+          <option value="Coachs Vote">Coachs Vote</option>
+          <option value="Players Vote">Players Vote</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>3 Pts</label>
+      <div class="select-wrap">
+        <select id="vote3" onchange="onVoteChange()">
+          <option value="" disabled selected>Select player</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>2 Pts</label>
+      <div class="select-wrap">
+        <select id="vote2" onchange="onVoteChange()">
+          <option value="" disabled selected>Select player</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>1 Pt</label>
+      <div class="select-wrap">
+        <select id="vote1" onchange="onVoteChange()">
+          <option value="" disabled selected>Select player</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <button class="btn" id="voteBtn" onclick="submitVotes()">Submit Votes</button>
+  <div class="status" id="voteStatus"></div>
 </div>
 
 <script>
@@ -406,6 +447,17 @@ async function loadPlayers() {
       playerSel.appendChild(opt);
     });
     playerSel.disabled = false;
+
+    // Populate 3-2-1 vote dropdowns
+    ['vote3', 'vote2', 'vote1'].forEach(id => {
+      const sel = document.getElementById(id);
+      sel.innerHTML = '<option value="" disabled selected>Select player</option>';
+      names.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name; opt.textContent = name;
+        sel.appendChild(opt);
+      });
+    });
 
   } catch(e) {
     loginSel.innerHTML = '<option value="" disabled selected>Could not load players</option>';
@@ -734,6 +786,79 @@ if ('serviceWorker' in navigator) {
 
 if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
   document.getElementById('installHint').classList.add('hidden');
+}
+
+// ─── 3-2-1 VOTES ─────────────────────────────────────────
+const VOTE_URL = "https://script.google.com/macros/s/AKfycbz_7f-_jMz1fIjMVqqT_d2rsrV7lJwkoYaOp5dQiymEPamzG4k9EHiLCzXmEoaNl-mlwA/exec";
+
+function onVoteChange() {
+  const v3 = document.getElementById('vote3').value;
+  const v2 = document.getElementById('vote2').value;
+  const v1 = document.getElementById('vote1').value;
+  const statusEl = document.getElementById('voteStatus');
+
+  // Check for duplicates
+  const selected = [v3, v2, v1].filter(v => v);
+  const unique = new Set(selected);
+  if (selected.length !== unique.size) {
+    statusEl.textContent = "Each player can only receive one vote.";
+    statusEl.className = "status err";
+  } else {
+    statusEl.textContent = "";
+    statusEl.className = "status";
+  }
+}
+
+async function submitVotes() {
+  const voteType = document.getElementById('voteType').value;
+  const v3 = document.getElementById('vote3').value;
+  const v2 = document.getElementById('vote2').value;
+  const v1 = document.getElementById('vote1').value;
+  const statusEl = document.getElementById('voteStatus');
+  const btn = document.getElementById('voteBtn');
+
+  if (!voteType || !v3 || !v2 || !v1) {
+    statusEl.textContent = "Please fill in all fields.";
+    statusEl.className = "status err"; return;
+  }
+
+  // Block duplicate players
+  if (v3 === v2 || v3 === v1 || v2 === v1) {
+    statusEl.textContent = "Each player can only receive one vote.";
+    statusEl.className = "status err"; return;
+  }
+
+  btn.disabled = true;
+  statusEl.textContent = "Submitting...";
+  statusEl.className = "status";
+
+  try {
+    // Submit 3 separate rows
+    const rows = [
+      { playerOrCoach: voteType, submittedBy: currentUser, submittedFor: v3, vote: 3 },
+      { playerOrCoach: voteType, submittedBy: currentUser, submittedFor: v2, vote: 2 },
+      { playerOrCoach: voteType, submittedBy: currentUser, submittedFor: v1, vote: 1 }
+    ];
+
+    await Promise.all(rows.map(row =>
+      fetch(VOTE_URL, {
+        method: "POST", mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "vote", ...row })
+      })
+    ));
+
+    statusEl.textContent = "Votes submitted!";
+    statusEl.className = "status ok";
+    document.getElementById('voteType').value = "";
+    document.getElementById('vote3').value = "";
+    document.getElementById('vote2').value = "";
+    document.getElementById('vote1').value = "";
+  } catch(err) {
+    statusEl.textContent = "Something went wrong. Check your connection.";
+    statusEl.className = "status err";
+  }
+  btn.disabled = false;
 }
 </script>
 </body>
