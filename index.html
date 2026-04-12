@@ -710,7 +710,7 @@ async function submitFine() {
     await fetch(SHEET_URL, {
       method: "POST", mode: "no-cors",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date, fineType, player, fine: fineDesc, amount, multiplier: multiplierUsed, submittedBy: currentUser })
+      body: JSON.stringify({ date, fineType, submittedBy: currentUser, player, fine: fineDesc, amount })
     });
     statusEl.textContent = `Logged — ${player}, ${amount}`;
     statusEl.className = "status ok";
