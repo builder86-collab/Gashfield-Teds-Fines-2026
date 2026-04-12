@@ -708,6 +708,7 @@ async function submitFine() {
 
   const payload = { date, fineType, submittedBy: currentUser, player, fine: fineDesc, amount };
   statusEl.textContent = "Sending: " + JSON.stringify(payload);
+  await new Promise(r => setTimeout(r, 5000));
 
   try {
     await fetch(SHEET_URL, {
