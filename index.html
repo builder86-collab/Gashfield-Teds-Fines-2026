@@ -578,8 +578,8 @@ async function loadTally() {
     // Tally per player
     const allTime = {}, thisWeek = {};
     rows.forEach(r => {
-      const player = r[2];
-      const amountStr = r[4] || '0';
+      const player = r[3];
+      const amountStr = r[5] || '0';
       const amount = parseFloat(amountStr.replace(/[^0-9.-]/g, '')) || 0;
 
       // Parse date DD/MM/YY
