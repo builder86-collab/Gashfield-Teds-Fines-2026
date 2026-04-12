@@ -336,30 +336,8 @@
     <div class="field">
       <label>Player</label>
       <div class="select-wrap">
-        <select id="player">
-          <option value="" disabled selected>Select player</option>
-          <option>Ben Nguyen</option>
-          <option>Brian Kip</option>
-          <option>Cam Stow</option>
-          <option>Dec Lumb</option>
-          <option>Des Khoo</option>
-          <option>Ben Cail</option>
-          <option>Jay Downey</option>
-          <option>Ben 'Hitman' Hart</option>
-          <option>Kurtis Rae</option>
-          <option>Jordan Chinkuli</option>
-          <option>Tom Bell</option>
-          <option>Journey</option>
-          <option>Kohby Coleman</option>
-          <option>Ben Kramer</option>
-          <option>Lachy Owen</option>
-          <option>Mark Eley</option>
-          <option>Michael Ritter</option>
-          <option>Teddy Cope</option>
-          <option>Onur Güler</option>
-          <option>Phil Kelly</option>
-          <option>Tom Bos</option>
-          <option>Wyatt Brown</option>
+        <select id="player" disabled>
+          <option value="" disabled selected>Loading players...</option>
         </select>
       </div>
     </div>
@@ -400,26 +378,40 @@
 const SHEET_ID = "1Fm_QRVYlTmxAUk81gtuWJQiid8izRxRMidZDzVkZ9zQ";
 
 async function loadPlayers() {
-  const sel = document.getElementById('loginName');
+  const loginSel = document.getElementById('loginName');
+  const playerSel = document.getElementById('player');
   try {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Players!A:A?key=AIzaSyD-placeholder`;
-    // Use CSV export instead — no API key needed for public sheets
+    // Use CSV export — no API key needed for public sheets
     const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Players`;
     const res = await fetch(csvUrl);
     const text = await res.text();
     const names = text.split('\n')
       .map(r => r.replace(/"/g, '').trim())
       .filter(r => r.length > 0);
-    sel.innerHTML = '<option value="" disabled selected>Select your name</option>';
+
+    // Populate login screen dropdown
+    loginSel.innerHTML = '<option value="" disabled selected>Select your name</option>';
     names.forEach(name => {
       const opt = document.createElement('option');
       opt.value = name; opt.textContent = name;
-      sel.appendChild(opt);
+      loginSel.appendChild(opt);
     });
-    sel.disabled = false;
+    loginSel.disabled = false;
+
+    // Populate main form player dropdown
+    playerSel.innerHTML = '<option value="" disabled selected>Select player</option>';
+    names.forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      playerSel.appendChild(opt);
+    });
+    playerSel.disabled = false;
+
   } catch(e) {
-    sel.innerHTML = '<option value="" disabled selected>Could not load players</option>';
-    sel.disabled = false;
+    loginSel.innerHTML = '<option value="" disabled selected>Could not load players</option>';
+    loginSel.disabled = false;
+    playerSel.innerHTML = '<option value="" disabled selected>Could not load players</option>';
+    playerSel.disabled = false;
     console.error('Failed to load players:', e);
   }
 }
@@ -654,12 +646,7 @@ function onTypeChange() {
   fs.innerHTML = '<option value="" disabled selected>Select fine</option>';
   document.getElementById("amountRow").innerHTML = "";
   FINES.forEach(f => {
-    const show =
-      (sel === "Training" && (f.type === "Training" || f.type === "Game Day or Training")) ||
-      (sel === "Game Day" && (f.type === "Game Day" || f.type === "Game Day or Training")) ||
-      (sel === "Weekly" && f.type === "Weekly") ||
-      (sel === "Reward" && f.type === "Reward");
-    if (show) {
+    if (f.type === sel) {
       const o = document.createElement("option");
       o.value = f.desc; o.textContent = f.desc;
       fs.appendChild(o);
